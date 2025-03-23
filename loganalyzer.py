@@ -1,11 +1,12 @@
 import os
+import datetime
 
 # Defining function that takes user input for the log file and the keyeords to search 
 
 def read_logs(file_path, keywords):
     """Reads the log file and filters lines containing specific keywords."""
     if not os.path.exists(file_path):
-        print(f"\n Error: Log file at {file_path} not found !\n")
+        print(f"\nError: Log file at {file_path} not found !\n")
         return
     
     print(f"\nSearching for:'{", ".join(keywords)}' in --> [{file_path}]...\n")
@@ -16,8 +17,28 @@ def read_logs(file_path, keywords):
             print(f"\nMatch Found : "+"-"*40)
             for log in filtered_logs:
              print(log)
+
+             save_filtered_logs(file_path,keywords,filtered_logs)
         else:
             print("\nNo Match Found !\n")
+
+def save_filtered_logs(file_path,keywords,logs):
+    """ We will save the recordings in a log file, these can be collectively stored in a Output_logs Directory"""
+    output_dir="Output_logs"
+    os.makedirs(output_dir, exist_ok=True)
+    # Timestamps
+    timestamp=datetime.datetime.now().strftime("%d %b %Y_%H%M%S")
+    file_name=f"{output_dir}/Filtered_Logs_{timestamp}.txt"
+    # Writing output to file 
+    with open(file_name,"w") as file:
+        file.write(f"Logs filtered. SOURCE: {file_path} \n")
+        file.write(f"Filter KEYWORDS: [{",".join(keywords)}] \n") 
+        file.write("-" * 20 + "\n")
+        file.write("-" * 20 + "\n")
+        file.write("\n".join(logs))
+
+    print(f"\nFiltered logs saved to: {file_name}")
+
 
 # running the log analyzer 
 if __name__ == "__main__":
