@@ -75,21 +75,79 @@ def export_logs(file_path,keywords,logs):
     else:
         print("\nInvalid Choice ! Logs will not be saved.") 
 
+def monitor_logs(file_path, keywords):
+    """ Monitors a log file in real time for new logs containing specific keywords and saves results"""
+
+    if not os.path.exists(file_path):
+        print(f"Error: File '{file_path}' not found!\n")
+        return
+    
+    print(f"\nMonitoring '{file_path}' for keywords: {', '.join(keywords)} (Press Ctrl+C to stop)...\n")
+    matched_logs=[]
+
+    try: 
+        with open(file_path, "r") as file:
+            file.seek(0, os.SEEK_END) # --> Moves to the end of the file
+
+            while True:
+                line = file.readline()
+                if line:
+                    if any(keyword.lower() in line.lower() for keyword in keywords):
+                        log_entry = line.strip()
+                        print(f"{log_entry}")
+                        matched_logs.append(log_entry)
+                    else: 
+                        time.sleep(1) #Wait for new lines to appear
+    
+    except KeyboardInterrupt:
+        print("Monitoring Stopped.")
+
+        if(matched_logs):
+            print("\n Saving logs ...")
+            export_logs(file_path,keywords,matched_logs) 
+
+        else:
+            print("No logs were matched. Nothing to save.")            
+
 # running the log analyzer 
 if __name__ == "__main__":
-    #User input for the log file path
-    log_file_path=input("\nEnter the path of the log file to be analyzed. DEFAULT (logs/sample.log)").strip()
-    if not log_file_path:
-        log_file_path="logs/sample.log"
 
-    #User input for keyword search    
-    keywords=input("\nEnter the keywords to search. Comma seperated e.g. (failed, denied, warning):\n").strip().split(",")
-    keywords = [word.strip() for word in keywords if word.strip()] 
+    print("\nLog Analyzer - Choose an Option:")
+    print("1. Analyze an exisiting log file")
+    print("2. Monitor logs in real-time")
 
-    if not keywords:
-        print("\nNo Keywords entered to search. Exiting ...\n")
+    mode = input("\nEnter your choice(1/2): ").strip()
+
+    if mode == "1":
+        #User input for the log file path
+        log_file_path=input("\nEnter the path of the log file to be analyzed. DEFAULT (logs/sample.log)").strip()
+        if not log_file_path:
+            log_file_path="logs/sample.log"
+
+        #User input for keyword search    
+        keywords=input("\nEnter the keywords to search. Comma seperated e.g. (failed, denied, warning):\n").strip().split(",")
+        keywords = [word.strip() for word in keywords if word.strip()] 
+
+        if not keywords:
+            print("\nNo Keywords entered to search. Exiting ...\n")
+
+        else:
+            read_logs(log_file_path,keywords)
+    
+    elif mode =="2":
+        log_file_path=input("\n Enter log file path to monitor (default: logs/sample.log): ").strip()
+        if not log_file_path:
+            log_file_path = "logs/sample.log"
+
+        keywords = input("\nEnter keywords to watch (comma-separated, e.g., 'failed,error,denied'): ").strip().split(",")
+        keywords = [word.strip() for word in keywords if word.strip()]
+
+        if not keywords:
+            print("\nNo keywords provided. Exiting...\n")
+        else:
+            monitor_logs(log_file_path, keywords)
 
     else:
-        read_logs(log_file_path,keywords)
+        print("\nInvalid choice! Exiting...\n")
     
     print(f"\nX"+"xX"*40)
