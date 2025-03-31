@@ -4,9 +4,28 @@ import json
 import csv
 import time
 
+# Define severity levels and their keywords
+SEVERITY_LEVELS = {
+    "INFO": ["started", "connected", "logged in", "success"],
+    "WARNING": ["failed", "failed attempt", "timeout", "deprecated", "high memory"],
+    "ERROR": ["authentication failure", "disk error", "process crash"],
+    "CRITICAL": ["root access", "brute-force", "security breach"]
+}
+
+# Defining function that clssifies log entry based on predefined severity keywords
+def classify_log(log_line):
+    """Classifies a log entry based on predefined severity keywords."""
+    log_lower = log_line.lower()
+    
+    for severity, keywords in SEVERITY_LEVELS.items():
+        if any(keyword in log_lower for keyword in keywords):
+            return severity, log_line
+    """Defaults to INFO"""
+    return "INFO", log_line  # Default to INFO if no match is found
+
 # Defining function that takes user input for the log file and the keyeords to search 
 
-def read_logs(file_path, keywords):
+def read_logs(file_path, keywords,severity_filter=None ):
     """Reads the log file and filters lines containing specific keywords."""
     if not os.path.exists(file_path):
         print(f"\nError: Log file at {file_path} not found !\n")
@@ -17,8 +36,9 @@ def read_logs(file_path, keywords):
     filtered_logs=[]
     with open(file_path,"r") as file:
         for line in file:
-            if any(keyword.lower() in line.lower() for keyword in keywords):
-                filtered_logs.append(line.strip())
+            severity, classified_log = classify_log(line)
+            if any(keyword.lower() in line.lower() for keyword in keywords) and (severity_filter is None or severity in severity_filter):
+                filtered_logs.append(f"[{severity}] {classified_log.strip()}")
 
     if filtered_logs:
         print(f"\nMatch Found : "+"-"*40)
@@ -67,15 +87,16 @@ def export_logs(file_path,keywords,logs):
         file_name=f"{file_base}.csv"
         with open(file_name, "w", newline="") as file:
             writer=csv.writer(file)
-            writer.writerow(["Logs"])
+            writer.writerow(["Severity", "Log Entry"])
             for log in logs:
-                writer.writerow([log])
+                parts = log.split("]",1)
+                writer.writerow([parts[0][1:], parts[1] if len(parts) > 1 else ""])
         print(f"Logs Saved to {file_name}")
     
     else:
         print("\nInvalid Choice ! Logs will not be saved.") 
 
-def monitor_logs(file_path, keywords):
+def monitor_logs(file_path, keywords, severity_filter=None):
     """ Monitors a log file in real time for new logs containing specific keywords and saves results"""
 
     if not os.path.exists(file_path):
@@ -92,8 +113,10 @@ def monitor_logs(file_path, keywords):
             while True:
                 line = file.readline()
                 if line:
-                    if any(keyword.lower() in line.lower() for keyword in keywords):
-                        log_entry = line.strip()
+                    severity, classified_log = classify_log(line)
+
+                    if any(keyword.lower() in line.lower() for keyword in keywords) and (severity_filter is None or severity in severity_filter):
+                        log_entry = f"[{severity}] {classified_log.strip()}"
                         print(f"{log_entry}")
                         matched_logs.append(log_entry)
                     else: 
@@ -128,24 +151,45 @@ if __name__ == "__main__":
         keywords=input("\nEnter the keywords to search. Comma seperated e.g. (failed, denied, warning):\n").strip().split(",")
         keywords = [word.strip() for word in keywords if word.strip()] 
 
-        if not keywords:
-            print("\nNo Keywords entered to search. Exiting ...\n")
+        print("\n🔽 Choose Severity Level to Filter:")
+        print("1. INFO")
+        print("2. WARNING")
+        print("3. ERROR")
+        print("4. CRITICAL")
+        print("5. ALL")
 
+        severity_choice = input("\nEnter choice (1/2/3/4/5): ").strip()
+        severity_map = {"1": ["INFO"], "2": ["WARNING"], "3": ["ERROR"], "4": ["CRITICAL"], "5": None}
+        severity_filter = severity_map.get(severity_choice, None)
+
+        if keywords:
+            read_logs(log_file_path, keywords, severity_filter)
         else:
-            read_logs(log_file_path,keywords)
+            print("\nNo keywords entered. Exiting...")
     
     elif mode =="2":
-        log_file_path=input("\n Enter log file path to monitor (default: logs/sample.log): ").strip()
+        log_file_path=input("\nEnter log file path to monitor (default: logs/sample.log): ").strip()
         if not log_file_path:
             log_file_path = "logs/sample.log"
 
         keywords = input("\nEnter keywords to watch (comma-separated, e.g., 'failed,error,denied'): ").strip().split(",")
         keywords = [word.strip() for word in keywords if word.strip()]
 
-        if not keywords:
-            print("\nNo keywords provided. Exiting...\n")
+        print("\n🔽 Choose Severity Level to Filter:")
+        print("1. INFO")
+        print("2. WARNING")
+        print("3. ERROR")
+        print("4. CRITICAL")
+        print("5. ALL")
+
+        severity_choice = input("\nEnter choice (1/2/3/4/5): ").strip()
+        severity_map = {"1": ["INFO"], "2": ["WARNING"], "3": ["ERROR"], "4": ["CRITICAL"], "5": None}
+        severity_filter = severity_map.get(severity_choice, None)
+
+        if keywords:
+            monitor_logs(log_file_path, keywords, severity_filter)
         else:
-            monitor_logs(log_file_path, keywords)
+            print("\nNo keywords provided. Exiting...")
 
     else:
         print("\nInvalid choice! Exiting...\n")
